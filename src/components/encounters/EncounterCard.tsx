@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { Encounter, EncounterOption } from '../../data/encounters';
 import { useGame } from '../../contexts/GameContext';
+import MinigameManager, { MinigameType } from '../minigames/MinigameManager';
 
 interface EncounterCardProps {
   encounter: Encounter;
@@ -13,6 +14,8 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
   const [showOutcome, setShowOutcome] = useState(false);
   const [selectedOption, setSelectedOption] = useState<EncounterOption | null>(null);
   const [resourceWarning, setResourceWarning] = useState<string | null>(null);
+  const [currentMinigame, setCurrentMinigame] = useState<MinigameType>(null);
+  const [minigameCompleted, setMinigameCompleted] = useState(false);
   
   const { 
     gameState,
@@ -26,6 +29,14 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
   } = useGame();
   
   const { resources, carHealth } = gameState;
+  
+  // Start minigame if this encounter has one
+  useEffect(() => {
+    if (encounter.minigame && !showOutcome && !currentMinigame && !minigameCompleted) {
+      console.log('Starting minigame:', encounter.minigame.type);
+      setCurrentMinigame(encounter.minigame.type);
+    }
+  }, [encounter, showOutcome, currentMinigame, minigameCompleted]);
   
   // Check for critical resource levels
   useEffect(() => {
@@ -97,6 +108,44 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
     console.log('Continuing after encounter');
     onComplete();
   };
+  
+  // Handle minigame completion
+  const handleMinigameComplete = (success: boolean) => {
+    console.log('EncounterCard: Minigame completed, success:', success);
+    console.log('Current encounter state:', { showOutcome, currentMinigame, id: encounter.id });
+    console.log('Auto progress flag:', encounter.autoProgressAfterMinigame);
+    
+    // Important: First set minigameCompleted to prevent restart  
+    setMinigameCompleted(true);
+    
+    // Then immediately clear the current minigame
+    setCurrentMinigame(null);
+    
+    // Use setTimeout to ensure state updates have been processed
+    setTimeout(() => {
+      // If we've been asked to auto-progress after the minigame, complete the encounter
+      if (encounter.autoProgressAfterMinigame) {
+        console.log('Auto-progressing after minigame');
+        completeEncounter(encounter.id);
+        onComplete();
+      } else {
+        console.log('Showing encounter options after minigame');
+        // If there are additional rewards for the minigame success, you could add them here
+      }
+    }, 50); // Short timeout to ensure state updates happen
+  };
+  
+  // If a minigame is in progress, render the MinigameManager
+  if (currentMinigame) {
+    return (
+      <MinigameManager
+        key={`${encounter.id}-${currentMinigame}`}
+        minigameType={currentMinigame}
+        difficulty={encounter.minigame?.difficulty || 'medium'}
+        onComplete={handleMinigameComplete}
+      />
+    );
+  }
 
   return (
     <CardContainer 
@@ -112,7 +161,7 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
         </ResourceWarning>
       )}
       
-      {!showOutcome ? (
+      {!showOutcome && (
         <>
           <CardDescription>{encounter.description}</CardDescription>
           
@@ -124,7 +173,7 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 // Show resource impact for options that affect resources
-                hasResourceEffect={!!option.resourceEffect || option.carHealthEffect !== undefined}
+                $hasResourceEffect={!!option.resourceEffect || option.carHealthEffect !== undefined}
               >
                 <OptionText>{option.text}</OptionText>
                 
@@ -132,27 +181,27 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
                 {(option.resourceEffect || option.carHealthEffect !== undefined) && (
                   <ResourceEffects>
                     {option.resourceEffect?.fuel !== undefined && (
-                      <ResourceEffect positive={option.resourceEffect.fuel > 0}>
+                      <ResourceEffect $positive={option.resourceEffect.fuel > 0}>
                         Fuel: {option.resourceEffect.fuel > 0 ? '+' : ''}{option.resourceEffect.fuel}
                       </ResourceEffect>
                     )}
                     {option.resourceEffect?.food !== undefined && (
-                      <ResourceEffect positive={option.resourceEffect.food > 0}>
+                      <ResourceEffect $positive={option.resourceEffect.food > 0}>
                         Food: {option.resourceEffect.food > 0 ? '+' : ''}{option.resourceEffect.food}
                       </ResourceEffect>
                     )}
                     {option.resourceEffect?.medicine !== undefined && (
-                      <ResourceEffect positive={option.resourceEffect.medicine > 0}>
+                      <ResourceEffect $positive={option.resourceEffect.medicine > 0}>
                         Medicine: {option.resourceEffect.medicine > 0 ? '+' : ''}{option.resourceEffect.medicine}
                       </ResourceEffect>
                     )}
                     {option.resourceEffect?.parts !== undefined && (
-                      <ResourceEffect positive={option.resourceEffect.parts > 0}>
+                      <ResourceEffect $positive={option.resourceEffect.parts > 0}>
                         Parts: {option.resourceEffect.parts > 0 ? '+' : ''}{option.resourceEffect.parts}
                       </ResourceEffect>
                     )}
                     {option.carHealthEffect !== undefined && (
-                      <ResourceEffect positive={option.carHealthEffect > 0}>
+                      <ResourceEffect $positive={option.carHealthEffect > 0}>
                         Car Health: {option.carHealthEffect > 0 ? '+' : ''}{option.carHealthEffect}
                       </ResourceEffect>
                     )}
@@ -162,7 +211,9 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
             ))}
           </OptionsContainer>
         </>
-      ) : (
+      )}
+      
+      {showOutcome && (
         <>
           <CardDescription>
             {selectedOption?.outcomes.text}
@@ -226,7 +277,7 @@ const OptionsContainer = styled.div`
 `;
 
 interface OptionButtonProps {
-  hasResourceEffect: boolean;
+  $hasResourceEffect: boolean;
 }
 
 const OptionButton = styled(motion.button)<OptionButtonProps>`
@@ -245,7 +296,7 @@ const OptionButton = styled(motion.button)<OptionButtonProps>`
   position: relative;
   
   /* Add a subtle indicator for options with resource effects */
-  ${props => props.hasResourceEffect && `
+  ${props => props.$hasResourceEffect && `
     border-left: 4px solid #ff9800;
   `}
 
@@ -266,15 +317,15 @@ const ResourceEffects = styled.div`
 `;
 
 interface ResourceEffectProps {
-  positive: boolean;
+  $positive: boolean;
 }
 
 const ResourceEffect = styled.span<ResourceEffectProps>`
   font-size: 0.8rem;
   padding: 0.2rem 0.4rem;
   border-radius: 3px;
-  background-color: ${props => props.positive ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'};
-  color: ${props => props.positive ? '#4caf50' : '#f44336'};
+  background-color: ${props => props.$positive ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'};
+  color: ${props => props.$positive ? '#4caf50' : '#f44336'};
   font-weight: bold;
 `;
 

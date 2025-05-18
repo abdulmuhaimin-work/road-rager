@@ -44,6 +44,11 @@ export type Encounter = {
   };
   options: EncounterOption[];
   isDeceptive?: boolean; // Does this encounter involve deception?
+  minigame?: {
+    type: 'driving' | 'repair' | 'scavenge';
+    difficulty: 'easy' | 'medium' | 'hard';
+  };
+  autoProgressAfterMinigame?: boolean; // If true, automatically progress after minigame completion
 };
 
 // Sample encounters array
@@ -132,8 +137,13 @@ export const encounters: Encounter[] = [
   {
     id: 'delayed-departure',
     title: 'Chaos in the Streets',
-    description: 'You waited too long. The streets are now filled with panicked people. Some are behaving strangely, showing signs of aggression. Your car is surrounded by a crowd trying to get out of the area.',
+    description: 'You waited too long. The streets are now filled with panicked people. Some are behaving strangely, showing signs of aggression. Your car is surrounded by a crowd trying to get out of the area. You need to navigate carefully through the chaos - grip the wheel tightly and drive through the mayhem.',
     location: 'downtown',
+    minigame: {
+      type: 'driving',
+      difficulty: 'medium'
+    },
+    autoProgressAfterMinigame: false,
     options: [
       {
         id: 'push-through',
@@ -252,6 +262,96 @@ export const encounters: Encounter[] = [
         outcomes: {
           text: 'You drive past, watching in your rearview mirror. The man\'s friendly demeanor changes as you pass, and you notice him speaking into a radio. You made the right call - it was an ambush setup.',
           nextEncounterId: 'ambush-avoided',
+        },
+      },
+    ],
+  },
+  {
+    id: 'car-trouble',
+    title: 'Engine Trouble',
+    description: 'Your car begins making an ominous grinding noise and suddenly sputters to a stop. You pop the hood to find several damaged components. You\'ll need to carefully repair the engine following the proper sequence if you want to continue your journey.',
+    location: 'outskirts',
+    minigame: {
+      type: 'repair',
+      difficulty: 'medium'
+    },
+    options: [
+      {
+        id: 'use-parts',
+        text: 'Use your spare parts to fix the car',
+        resourceEffect: {
+          parts: -15,
+        },
+        carHealthEffect: 25,
+        outcomes: {
+          text: 'You manage to repair the most critical components. The car isn\'t in perfect condition, but it should get you further down the road.',
+          nextEncounterId: 'continue-journey',
+        },
+      },
+      {
+        id: 'look-for-help',
+        text: 'Look for someone who might help',
+        outcomes: {
+          text: 'After walking for a while, you spot a small garage in the distance. Maybe someone there can help with your car troubles.',
+          nextEncounterId: 'find-mechanic',
+        },
+      },
+      {
+        id: 'abandon-vehicle',
+        text: 'Abandon the car and continue on foot',
+        resourceEffect: {
+          food: -10,
+          fuel: -20,
+        },
+        outcomes: {
+          text: 'You grab what you can carry and set off on foot. The road ahead looks long and dangerous without transportation.',
+          nextEncounterId: 'on-foot-journey',
+        },
+      },
+    ],
+  },
+  {
+    id: 'abandoned-mall',
+    title: 'Abandoned Shopping Mall',
+    description: 'You come across a deserted shopping mall. The entrance is partially obstructed, but you can see potentially useful supplies inside. You\'ll need to move quickly and quietly, searching the area thoroughly for anything useful while avoiding potential dangers.',
+    location: 'city-edge',
+    minigame: {
+      type: 'scavenge',
+      difficulty: 'hard'
+    },
+    options: [
+      {
+        id: 'quick-search',
+        text: 'Quickly search for supplies and leave',
+        resourceEffect: {
+          food: 15,
+          medicine: 10,
+        },
+        outcomes: {
+          text: 'You find some canned food and medicine that others missed. You hear noises from deeper in the mall and decide not to push your luck.',
+          nextEncounterId: 'continue-journey',
+        },
+      },
+      {
+        id: 'thorough-search',
+        text: 'Conduct a thorough search of the mall',
+        resourceEffect: {
+          food: 30,
+          medicine: 20,
+          parts: 15,
+          fuel: 10,
+        },
+        outcomes: {
+          text: 'Your patience pays off as you discover a stockpile of supplies hidden in a storage room. You load up as much as you can carry and make your way back to the car.',
+          nextEncounterId: 'mall-exit',
+        },
+      },
+      {
+        id: 'leave-mall',
+        text: 'It\'s too risky - leave and look elsewhere',
+        outcomes: {
+          text: 'You decide the potential reward isn\'t worth the risk. As you drive away, you notice several figures emerging from the mall. You made the right call.',
+          nextEncounterId: 'continue-journey',
         },
       },
     ],

@@ -36,7 +36,7 @@ const CharacterPanel: React.FC = () => {
           <CharacterAvatar 
             key={character.id}
             onClick={() => setSelectedCharacter(character)}
-            active={selectedCharacter?.id === character.id}
+            $active={selectedCharacter?.id === character.id}
             trustLevel={character.trustLevel}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -162,7 +162,7 @@ const CharactersGrid = styled.div`
 `;
 
 interface CharacterAvatarProps {
-  active: boolean;
+  $active: boolean;
   trustLevel: number;
 }
 
@@ -178,7 +178,7 @@ const CharacterAvatar = styled(motion.div)<CharacterAvatarProps>`
   font-weight: bold;
   color: #000;
   cursor: pointer;
-  border: 3px solid ${props => props.active ? '#fff' : 'transparent'};
+  border: 3px solid ${props => props.$active ? '#fff' : 'transparent'};
   transition: border-color 0.3s;
 `;
 

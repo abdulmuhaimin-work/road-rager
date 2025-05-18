@@ -125,7 +125,7 @@ const GamePage: React.FC = () => {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       disabled={loc.id === location}
-                      active={loc.id === location}
+                      $active={loc.id === location}
                     >
                       {loc.name}
                       {loc.id === location && " (Current)"}
@@ -261,12 +261,12 @@ const LocationsGrid = styled.div`
 `;
 
 interface LocationButtonProps {
-  active: boolean;
+  $active: boolean;
   disabled: boolean;
 }
 
 const LocationButton = styled(motion.button)<LocationButtonProps>`
-  background-color: ${props => props.active ? 'rgba(255, 85, 85, 0.7)' : 'rgba(255, 85, 85, 0.2)'};
+  background-color: ${props => props.$active ? 'rgba(255, 85, 85, 0.7)' : 'rgba(255, 85, 85, 0.2)'};
   color: #f0f0f0;
   border: 1px solid #ff5555;
   border-radius: 4px;

@@ -46,15 +46,14 @@ const HomePage: React.FC = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.6 }}
         >
-          <StartButton 
-            as={Link} 
+          <StartButtonLink 
             to="/game"
             onClick={handleStartGame}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             START JOURNEY
-          </StartButton>
+          </StartButtonLink>
         </ButtonContainer>
       </Content>
       
@@ -141,6 +140,23 @@ const ButtonContainer = styled(motion.div)`
 `;
 
 const StartButton = styled(motion.button)`
+  background-color: #ff5555;
+  color: #000;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #ff7777;
+  }
+`;
+
+const StartButtonLink = styled(motion(Link))`
   background-color: #ff5555;
   color: #000;
   border: none;
