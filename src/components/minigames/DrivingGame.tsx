@@ -29,6 +29,7 @@ type GameStatus = 'playing' | 'success' | 'failed';
 
 const DrivingGame: React.FC<DrivingGameProps> = ({ difficulty, onComplete }) => {
   const [score, setScore] = useState(0);
+  const scoreRef = useRef(0); // Add ref to track score
   const [gameOver, setGameOver] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30); // 30 seconds to complete
   const [gameStatus, setGameStatus] = useState<GameStatus>('playing');
@@ -43,6 +44,11 @@ const DrivingGame: React.FC<DrivingGameProps> = ({ difficulty, onComplete }) => 
   
   const settings = difficultySettings[difficulty];
   
+  // Update score ref whenever score changes
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+  
   // Set up the game timer
   useEffect(() => {
     setTimeLeft(settings.timeLimit);
@@ -54,7 +60,7 @@ const DrivingGame: React.FC<DrivingGameProps> = ({ difficulty, onComplete }) => 
           setGameOver(true);
           // Complete with success if score is high enough
           const threshold = difficulty === 'easy' ? 50 : difficulty === 'medium' ? 75 : 100;
-          const success = score >= threshold;
+          const success = scoreRef.current >= threshold; // Use ref instead of state
           setGameStatus(success ? 'success' : 'failed');
           return 0;
         }
@@ -63,7 +69,7 @@ const DrivingGame: React.FC<DrivingGameProps> = ({ difficulty, onComplete }) => 
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [difficulty, score, settings.timeLimit]);
+  }, [difficulty, settings.timeLimit]); // Remove score from dependencies
 
   // Handle game completion
   const handleGameComplete = () => {

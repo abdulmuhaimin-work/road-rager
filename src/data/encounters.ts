@@ -1,362 +1,273 @@
-export type EncounterOption = {
-  id: string;
-  text: string;
-  resourceEffect?: {
-    fuel?: number;
-    food?: number;
-    medicine?: number;
-    parts?: number;
-  };
-  carHealthEffect?: number;
-  trustEffect?: {
-    characterId: string;
-    amount: number;
-  }[];
-  outcomes: {
-    text: string;
-    nextEncounterId?: string;
-    revealDeception?: boolean;
-    addCharacter?: {
-      id: string;
-      name: string;
-      trustLevel: number;
-      isTrustworthy: boolean;
-      faction: 'guardians' | 'scavengers' | 'truthers' | 'neocorp' | 'none';
-      description: string;
-      metAt: string;
-    };
-    gameOver?: boolean;
-    endingType?: string;
-  };
-};
+import { MinigameType } from '../components/minigames/MinigameManager';
 
-export type Encounter = {
+export interface Encounter {
   id: string;
   title: string;
   description: string;
+  type: 'combat' | 'dialogue' | 'exploration' | 'resource' | 'story';
+  isFirstAppearance?: boolean;
+  character?: string;
   location: string;
-  day?: number; // If specified, only appears on this day
-  image?: string;
-  character?: string; // Character ID if this encounter is tied to a specific character
+  day?: number;
   requiredChoice?: {
     choiceId: string;
     value: string;
   };
-  options: EncounterOption[];
-  isDeceptive?: boolean; // Does this encounter involve deception?
   minigame?: {
-    type: 'driving' | 'repair' | 'scavenge';
+    type: MinigameType;
     difficulty: 'easy' | 'medium' | 'hard';
   };
-  autoProgressAfterMinigame?: boolean; // If true, automatically progress after minigame completion
-};
+  autoProgressAfterMinigame?: boolean;
+  options: EncounterOption[];
+  isDeceptive?: boolean;
+}
 
-// Sample encounters array
+export interface EncounterOption {
+  id: string;
+  text: string;
+  resourceEffect?: {
+    food?: number;
+    fuel?: number;
+    medicine?: number;
+    parts?: number;
+  };
+  carHealthEffect?: number;
+  trustEffect?: Array<{
+    characterId: string;
+    amount: number;
+  }>;
+  outcomes: {
+    text: string;
+    nextEncounterId?: string;
+    addCharacter?: Character;
+    gameOver?: boolean;
+    endingType?: string;
+  };
+}
+
+interface Character {
+  id: string;
+  name: string;
+  trustLevel: number;
+  isTrustworthy: boolean;
+  faction: 'guardians' | 'scavengers' | 'truthers' | 'neocorp' | 'none';
+  description: string;
+  metAt: string;
+}
+
 export const encounters: Encounter[] = [
   {
-    id: 'intro',
-    title: 'Outbreak Day',
-    description: 'Your phone buzzes with an urgent message from an old friend: "Get out of the city now. Don\'t trust anyone." Outside, you hear sirens and see people rushing through the streets. The news is reporting an unknown incident downtown.',
+    id: 'apartment-start',
+    title: 'The Beginning',
+    description: 'You wake up in your apartment to the sound of distant explosions. Your sister, Dr. Emily Chen, bursts in, her face pale with fear.',
+    type: 'story',
+    isFirstAppearance: true,
+    character: 'player-sister',
     location: 'apartment',
     day: 1,
     options: [
       {
-        id: 'pack-and-leave',
-        text: 'Pack essential supplies and leave immediately',
-        resourceEffect: {
-          food: 20,
-          medicine: 10,
-        },
+        id: 'listen-sister',
+        text: 'Listen to what she has to say',
         outcomes: {
-          text: 'You quickly gather what supplies you can carry and rush to your car. The streets are already getting crowded with others trying to flee.',
-          nextEncounterId: 'roadblock',
-        },
-      },
-      {
-        id: 'check-news',
-        text: 'Wait and gather more information',
-        outcomes: {
-          text: 'You spend precious time monitoring the news as the situation worsens. Reports of strange behavior and violence are spreading across the city.',
-          nextEncounterId: 'delayed-departure',
-        },
-      },
-      {
-        id: 'call-friend',
-        text: 'Try to call your friend for more details',
-        outcomes: {
-          text: 'The call doesn\'t go through. You text instead and get a cryptic reply: "NeoCorp. Contamination. Eastern exit still clear." This doesn\'t make sense now, but you might remember it later.',
-          nextEncounterId: 'roadblock',
-        },
-      },
-    ],
+          text: 'Emily explains that NeoCorp has weaponized Project Phoenix, turning people into mindless drones. We need to escape the city.',
+          nextEncounterId: 'apartment-escape'
+        }
+      }
+    ]
   },
   {
-    id: 'roadblock',
-    title: 'Military Roadblock',
-    description: 'You approach a military checkpoint. Armed soldiers are turning most vehicles away. A desperate family in a minivan is arguing with the soldiers.',
-    location: 'city-edge',
+    id: 'apartment-escape',
+    title: 'Escape Plan',
+    description: 'Emily has a plan. We need to gather supplies and find a working vehicle before NeoCorp\'s forces reach this district.',
+    type: 'dialogue',
+    character: 'player-sister',
+    location: 'apartment',
     options: [
       {
-        id: 'wait-in-line',
-        text: 'Wait patiently for your turn',
-        outcomes: {
-          text: 'After a long wait, you reach the checkpoint. The soldier informs you that civilian evacuation has been suspended. You\'re ordered to return to your home for quarantine.',
-          nextEncounterId: 'find-alternate-route',
-        },
-      },
-      {
-        id: 'help-family',
-        text: 'Offer to help the arguing family',
+        id: 'gather-supplies',
+        text: 'Start gathering supplies',
         resourceEffect: {
-          food: -10,
+          food: 20,
+          medicine: 10
         },
         outcomes: {
-          text: 'You approach the family and offer some of your supplies as a gesture of goodwill. They\'re grateful but still turned away. The father quietly mentions an unguarded service road a few miles east.',
-          nextEncounterId: 'service-road',
-          addCharacter: {
-            id: 'martinez-family',
-            name: 'Martinez Family',
-            trustLevel: 20,
-            isTrustworthy: true,
-            faction: 'guardians',
-            description: 'A family of four trying to escape the city. They seem honest and desperate.',
-            metAt: 'city-edge',
-          },
-        },
-      },
-      {
-        id: 'find-other-way',
-        text: 'Turn around and look for another exit',
-        outcomes: {
-          text: 'You avoid the checkpoint entirely, deciding to find another way out. As you drive away, you notice others are doing the same.',
-          nextEncounterId: 'find-alternate-route',
-        },
-      },
-    ],
+          text: 'You quickly pack essential supplies while Emily secures the apartment.',
+          nextEncounterId: 'apartment-vehicle'
+        }
+      }
+    ]
   },
   {
-    id: 'delayed-departure',
-    title: 'Chaos in the Streets',
-    description: 'You waited too long. The streets are now filled with panicked people. Some are behaving strangely, showing signs of aggression. Your car is surrounded by a crowd trying to get out of the area. You need to navigate carefully through the chaos - grip the wheel tightly and drive through the mayhem.',
-    location: 'downtown',
+    id: 'apartment-vehicle',
+    title: 'Vehicle Search',
+    description: 'You need to find a working vehicle. The parking garage might have something usable.',
+    type: 'exploration',
+    location: 'apartment',
+    options: [
+      {
+        id: 'search-garage',
+        text: 'Search the parking garage',
+        outcomes: {
+          text: 'You find an old but functional car. It needs some repairs, but it should work.',
+          nextEncounterId: 'apartment-repair'
+        }
+      }
+    ]
+  },
+  {
+    id: 'apartment-repair',
+    title: 'Car Repairs',
+    description: 'The car needs some basic repairs before it\'s roadworthy.',
+    type: 'resource',
+    location: 'apartment',
     minigame: {
-      type: 'driving',
+      type: 'repair',
       difficulty: 'medium'
     },
     autoProgressAfterMinigame: false,
     options: [
       {
-        id: 'push-through',
-        text: 'Honk and slowly push through the crowd',
-        carHealthEffect: -10,
+        id: 'repair-car',
+        text: 'Repair the car',
+        carHealthEffect: 20,
         outcomes: {
-          text: 'You manage to move forward, but your car takes some damage from people pounding on it. You\'ve made it out of the immediate danger zone.',
-          nextEncounterId: 'find-alternate-route',
-        },
-      },
+          text: 'The car is now in working condition. Time to leave.',
+          nextEncounterId: 'city-edge'
+        }
+      }
+    ]
+  },
+  {
+    id: 'city-edge',
+    title: 'City Limits',
+    description: 'You reach the edge of the city. A family is trying to escape, but their car has broken down.',
+    type: 'dialogue',
+    character: 'martinez-family',
+    isFirstAppearance: true,
+    location: 'city-edge',
+    options: [
       {
-        id: 'abandon-car',
-        text: 'Abandon your car and continue on foot',
+        id: 'help-family',
+        text: 'Offer to help them',
         resourceEffect: {
-          food: -20,
-          medicine: -10,
-          parts: -20,
+          food: -10,
+          medicine: -5
         },
         outcomes: {
-          text: 'You grab what you can carry and slip into an alley. You\'ll need to find another vehicle, but at least you\'re mobile.',
-          nextEncounterId: 'on-foot',
-        },
-      },
+          text: 'The family is grateful for your help. They share some information about NeoCorp\'s checkpoints.',
+          nextEncounterId: 'checkpoint-1'
+        }
+      }
+    ]
+  },
+  {
+    id: 'checkpoint-1',
+    title: 'NeoCorp Checkpoint',
+    description: 'A NeoCorp checkpoint blocks the road. A scientist approaches, claiming to have defected.',
+    type: 'dialogue',
+    character: 'dr-chen',
+    isFirstAppearance: true,
+    isDeceptive: true,
+    location: 'checkpoint-1',
+    options: [
       {
-        id: 'offer-ride',
-        text: 'Offer a ride to someone who seems calm',
+        id: 'trust-scientist',
+        text: 'Trust the scientist',
         outcomes: {
-          text: 'You call out to a woman who seems less panicked than the others. She gratefully gets in, introducing herself as Dr. Sarah Chen, a researcher at NeoCorp. She might know something about what\'s happening.',
-          nextEncounterId: 'dr-chen',
+          text: 'The scientist leads you into a trap. NeoCorp forces surround you.',
           addCharacter: {
             id: 'dr-chen',
             name: 'Dr. Sarah Chen',
             trustLevel: 0,
             isTrustworthy: false,
             faction: 'neocorp',
-            description: 'A composed scientist who seems to have insider knowledge about the crisis.',
-            metAt: 'downtown',
+            description: 'A NeoCorp scientist who claims to have defected. But can you trust someone who helped create this nightmare?',
+            metAt: 'checkpoint-1'
           },
-        },
-      },
-    ],
+          nextEncounterId: 'checkpoint-escape'
+        }
+      }
+    ]
   },
   {
-    id: 'find-alternate-route',
-    title: 'The Gas Station',
-    description: 'With main roads blocked, you stop at a gas station to refuel and reconsider your options. Inside, you find a few people gathering supplies. The attendant looks nervous, hand under the counter.',
-    location: 'gas-station',
-    options: [
-      {
-        id: 'ask-directions',
-        text: 'Ask the attendant about alternate routes',
-        outcomes: {
-          text: 'The attendant is suspicious at first but relaxes when you explain your situation. He mentions a maintenance tunnel that bypasses the main checkpoints but warns it might be dangerous.',
-          nextEncounterId: 'tunnel-entrance',
-        },
-      },
-      {
-        id: 'listen-to-group',
-        text: 'Eavesdrop on the group gathering supplies',
-        outcomes: {
-          text: 'The group is discussing a "safe zone" being established by someone called Marcus in the old industrial district. They seem to be collecting supplies for the community there.',
-          nextEncounterId: 'approach-group',
-        },
-      },
-      {
-        id: 'take-supplies',
-        text: 'Quickly grab supplies and leave',
-        resourceEffect: {
-          food: 30,
-          medicine: 20,
-          fuel: 40,
-        },
-        outcomes: {
-          text: 'You stock up on essentials and fill your tank, paying with your last cash. As you leave, you notice a map on the wall showing service roads out of the city.',
-          nextEncounterId: 'service-road',
-        },
-      },
-    ],
-  },
-  // More encounters would be added here...
-  {
-    id: 'lone-traveler',
-    title: 'A Lone Traveler',
-    description: 'On a quiet stretch of road, you spot a man with a backpack walking alone. He waves at your car, clearly hoping for a ride.',
-    location: 'outskirts',
-    isDeceptive: true, // This encounter involves potential deception
-    options: [
-      {
-        id: 'offer-ride',
-        text: 'Stop and offer him a ride',
-        outcomes: {
-          text: 'The man introduces himself as Mike, a mechanic trying to reach his family in the next town. He seems friendly and offers to help if you have any car troubles.',
-          addCharacter: {
-            id: 'mike',
-            name: 'Mike the Mechanic',
-            trustLevel: 10,
-            isTrustworthy: false, // He's actually a scavenger planning to steal supplies
-            faction: 'scavengers',
-            description: 'A friendly mechanic who seems helpful and knowledgeable about cars.',
-            metAt: 'outskirts',
-          },
-          nextEncounterId: 'mike-conversation',
-        },
-      },
-      {
-        id: 'slow-down',
-        text: 'Slow down but remain cautious',
-        outcomes: {
-          text: 'You slow down and talk through your window. Something about his story doesn\'t add up - there\'s motor oil on his hands, but his fingernails are too clean for a working mechanic. You decide to trust your instincts.',
-          nextEncounterId: 'mike-rejected',
-        },
-      },
-      {
-        id: 'drive-past',
-        text: 'Drive past without stopping',
-        outcomes: {
-          text: 'You drive past, watching in your rearview mirror. The man\'s friendly demeanor changes as you pass, and you notice him speaking into a radio. You made the right call - it was an ambush setup.',
-          nextEncounterId: 'ambush-avoided',
-        },
-      },
-    ],
-  },
-  {
-    id: 'car-trouble',
-    title: 'Engine Trouble',
-    description: 'Your car begins making an ominous grinding noise and suddenly sputters to a stop. You pop the hood to find several damaged components. You\'ll need to carefully repair the engine following the proper sequence if you want to continue your journey.',
-    location: 'outskirts',
+    id: 'checkpoint-escape',
+    title: 'Escape the Checkpoint',
+    description: 'You need to escape the NeoCorp forces. The car needs to be in top condition.',
+    type: 'combat',
+    location: 'checkpoint-1',
     minigame: {
-      type: 'repair',
+      type: 'driving',
       difficulty: 'medium'
     },
     options: [
       {
-        id: 'use-parts',
-        text: 'Use your spare parts to fix the car',
-        resourceEffect: {
-          parts: -15,
-        },
-        carHealthEffect: 25,
+        id: 'drive-escape',
+        text: 'Make a break for it',
+        carHealthEffect: -10,
         outcomes: {
-          text: 'You manage to repair the most critical components. The car isn\'t in perfect condition, but it should get you further down the road.',
-          nextEncounterId: 'continue-journey',
-        },
-      },
-      {
-        id: 'look-for-help',
-        text: 'Look for someone who might help',
-        outcomes: {
-          text: 'After walking for a while, you spot a small garage in the distance. Maybe someone there can help with your car troubles.',
-          nextEncounterId: 'find-mechanic',
-        },
-      },
-      {
-        id: 'abandon-vehicle',
-        text: 'Abandon the car and continue on foot',
-        resourceEffect: {
-          food: -10,
-          fuel: -20,
-        },
-        outcomes: {
-          text: 'You grab what you can carry and set off on foot. The road ahead looks long and dangerous without transportation.',
-          nextEncounterId: 'on-foot-journey',
-        },
-      },
-    ],
+          text: 'You manage to escape, but the car took some damage.',
+          nextEncounterId: 'outskirts'
+        }
+      }
+    ]
   },
   {
-    id: 'abandoned-mall',
-    title: 'Abandoned Shopping Mall',
-    description: 'You come across a deserted shopping mall. The entrance is partially obstructed, but you can see potentially useful supplies inside. You\'ll need to move quickly and quietly, searching the area thoroughly for anything useful while avoiding potential dangers.',
-    location: 'city-edge',
+    id: 'outskirts',
+    title: 'City Outskirts',
+    description: 'You reach the outskirts of the city. A mechanic offers to help repair your car.',
+    type: 'dialogue',
+    character: 'mike',
+    isFirstAppearance: true,
+    location: 'outskirts',
+    options: [
+      {
+        id: 'accept-help',
+        text: 'Accept the mechanic\'s help',
+        resourceEffect: {
+          parts: 5
+        },
+        carHealthEffect: 15,
+        outcomes: {
+          text: 'The mechanic repairs your car and gives you some spare parts.',
+          nextEncounterId: 'safe-zone'
+        }
+      }
+    ]
+  },
+  {
+    id: 'safe-zone',
+    title: 'Safe Zone',
+    description: 'You find a supposed safe zone. A former NeoCorp researcher claims to have a cure.',
+    type: 'story',
+    character: 'marcus',
+    isFirstAppearance: true,
+    location: 'safe-zone',
     minigame: {
       type: 'scavenge',
       difficulty: 'hard'
     },
     options: [
       {
-        id: 'quick-search',
-        text: 'Quickly search for supplies and leave',
+        id: 'search-cure',
+        text: 'Search for the cure',
         resourceEffect: {
-          food: 15,
-          medicine: 10,
+          food: 10,
+          medicine: 15
         },
         outcomes: {
-          text: 'You find some canned food and medicine that others missed. You hear noises from deeper in the mall and decide not to push your luck.',
-          nextEncounterId: 'continue-journey',
-        },
-      },
-      {
-        id: 'thorough-search',
-        text: 'Conduct a thorough search of the mall',
-        resourceEffect: {
-          food: 30,
-          medicine: 20,
-          parts: 15,
-          fuel: 10,
-        },
-        outcomes: {
-          text: 'Your patience pays off as you discover a stockpile of supplies hidden in a storage room. You load up as much as you can carry and make your way back to the car.',
-          nextEncounterId: 'mall-exit',
-        },
-      },
-      {
-        id: 'leave-mall',
-        text: 'It\'s too risky - leave and look elsewhere',
-        outcomes: {
-          text: 'You decide the potential reward isn\'t worth the risk. As you drive away, you notice several figures emerging from the mall. You made the right call.',
-          nextEncounterId: 'continue-journey',
-        },
-      },
-    ],
-  },
+          text: 'You find some supplies, but the cure remains elusive.',
+          nextEncounterId: 'final-choice'
+        }
+      }
+    ]
+  }
 ];
+
+// Helper function to get encounter by ID
+export const getEncounterById = (id: string): Encounter | undefined => {
+  return encounters.find(encounter => encounter.id === id);
+};
 
 // Function to get available encounters based on game state
 export const getAvailableEncounters = (

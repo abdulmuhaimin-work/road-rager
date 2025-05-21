@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { Encounter, EncounterOption } from '../../data/encounters';
 import { useGame } from '../../contexts/GameContext';
 import MinigameManager, { MinigameType } from '../minigames/MinigameManager';
+import NarrationPanel from '../ui/NarrationPanel';
+import { getCharacterById } from '../../data/characters';
 
 interface EncounterCardProps {
   encounter: Encounter;
@@ -16,6 +18,7 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
   const [resourceWarning, setResourceWarning] = useState<string | null>(null);
   const [currentMinigame, setCurrentMinigame] = useState<MinigameType>(null);
   const [minigameCompleted, setMinigameCompleted] = useState(false);
+  const [narrationComplete, setNarrationComplete] = useState(false);
   
   const { 
     gameState,
@@ -29,6 +32,9 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
   } = useGame();
   
   const { resources, carHealth } = gameState;
+
+  // Get character if this encounter is tied to one
+  const character = encounter.character ? getCharacterById(encounter.character) : undefined;
   
   // Start minigame if this encounter has one
   useEffect(() => {
@@ -54,6 +60,7 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
   const handleOptionSelect = (option: EncounterOption) => {
     console.log('Selected option:', option);
     setSelectedOption(option);
+    setNarrationComplete(false);
     
     // Record the choice
     makeChoice(option.id, option.id);
@@ -93,12 +100,6 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
     // Mark encounter as completed
     console.log('Completing encounter:', encounter.id);
     completeEncounter(encounter.id);
-    
-    // If this option leads to another encounter, add it to completed as well
-    // This is necessary for proper encounter chaining
-    if (option.outcomes.nextEncounterId) {
-      console.log('Next encounter ID:', option.outcomes.nextEncounterId);
-    }
     
     // Show the outcome
     setShowOutcome(true);
@@ -147,6 +148,33 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
     );
   }
 
+  // Get ambient sound based on encounter type
+  const getAmbientSound = () => {
+    switch (encounter.type) {
+      case 'combat':
+        return '/assets/audio/ambient/combat.mp3';
+      case 'dialogue':
+        return '/assets/audio/ambient/dialogue.mp3';
+      case 'exploration':
+        return '/assets/audio/ambient/exploration.mp3';
+      default:
+        return '/assets/audio/ambient/default.mp3';
+    }
+  };
+
+  // Get voice line based on character and encounter
+  const getVoiceLine = () => {
+    if (!character) return undefined;
+    
+    // If this is a character's first appearance, use their introduction line
+    if (encounter.isFirstAppearance) {
+      return `/assets/audio/voice/${character.id}/intro.mp3`;
+    }
+    
+    // Otherwise use a generic line based on the encounter type
+    return `/assets/audio/voice/${character.id}/${encounter.type}.mp3`;
+  };
+
   return (
     <CardContainer 
       initial={{ opacity: 0, y: 50 }}
@@ -163,69 +191,81 @@ const EncounterCard: React.FC<EncounterCardProps> = ({ encounter, onComplete }) 
       
       {!showOutcome && (
         <>
-          <CardDescription>{encounter.description}</CardDescription>
+          <NarrationPanel 
+            text={encounter.description}
+            character={character}
+            onComplete={() => setNarrationComplete(true)}
+            ambientSound={getAmbientSound()}
+            voiceLine={getVoiceLine()}
+          />
           
-          <OptionsContainer>
-            {encounter.options.map(option => (
-              <OptionButton 
-                key={option.id}
-                onClick={() => handleOptionSelect(option)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                // Show resource impact for options that affect resources
-                $hasResourceEffect={!!option.resourceEffect || option.carHealthEffect !== undefined}
-              >
-                <OptionText>{option.text}</OptionText>
-                
-                {/* Show resource effects preview */}
-                {(option.resourceEffect || option.carHealthEffect !== undefined) && (
-                  <ResourceEffects>
-                    {option.resourceEffect?.fuel !== undefined && (
-                      <ResourceEffect $positive={option.resourceEffect.fuel > 0}>
-                        Fuel: {option.resourceEffect.fuel > 0 ? '+' : ''}{option.resourceEffect.fuel}
-                      </ResourceEffect>
-                    )}
-                    {option.resourceEffect?.food !== undefined && (
-                      <ResourceEffect $positive={option.resourceEffect.food > 0}>
-                        Food: {option.resourceEffect.food > 0 ? '+' : ''}{option.resourceEffect.food}
-                      </ResourceEffect>
-                    )}
-                    {option.resourceEffect?.medicine !== undefined && (
-                      <ResourceEffect $positive={option.resourceEffect.medicine > 0}>
-                        Medicine: {option.resourceEffect.medicine > 0 ? '+' : ''}{option.resourceEffect.medicine}
-                      </ResourceEffect>
-                    )}
-                    {option.resourceEffect?.parts !== undefined && (
-                      <ResourceEffect $positive={option.resourceEffect.parts > 0}>
-                        Parts: {option.resourceEffect.parts > 0 ? '+' : ''}{option.resourceEffect.parts}
-                      </ResourceEffect>
-                    )}
-                    {option.carHealthEffect !== undefined && (
-                      <ResourceEffect $positive={option.carHealthEffect > 0}>
-                        Car Health: {option.carHealthEffect > 0 ? '+' : ''}{option.carHealthEffect}
-                      </ResourceEffect>
-                    )}
-                  </ResourceEffects>
-                )}
-              </OptionButton>
-            ))}
-          </OptionsContainer>
+          {narrationComplete && (
+            <OptionsContainer>
+              {encounter.options.map(option => (
+                <OptionButton 
+                  key={option.id}
+                  onClick={() => handleOptionSelect(option)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  $hasResourceEffect={!!option.resourceEffect || option.carHealthEffect !== undefined}
+                >
+                  <OptionText>{option.text}</OptionText>
+                  
+                  {(option.resourceEffect || option.carHealthEffect !== undefined) && (
+                    <ResourceEffects>
+                      {option.resourceEffect?.fuel !== undefined && (
+                        <ResourceEffect $positive={option.resourceEffect.fuel > 0}>
+                          Fuel: {option.resourceEffect.fuel > 0 ? '+' : ''}{option.resourceEffect.fuel}
+                        </ResourceEffect>
+                      )}
+                      {option.resourceEffect?.food !== undefined && (
+                        <ResourceEffect $positive={option.resourceEffect.food > 0}>
+                          Food: {option.resourceEffect.food > 0 ? '+' : ''}{option.resourceEffect.food}
+                        </ResourceEffect>
+                      )}
+                      {option.resourceEffect?.medicine !== undefined && (
+                        <ResourceEffect $positive={option.resourceEffect.medicine > 0}>
+                          Medicine: {option.resourceEffect.medicine > 0 ? '+' : ''}{option.resourceEffect.medicine}
+                        </ResourceEffect>
+                      )}
+                      {option.resourceEffect?.parts !== undefined && (
+                        <ResourceEffect $positive={option.resourceEffect.parts > 0}>
+                          Parts: {option.resourceEffect.parts > 0 ? '+' : ''}{option.resourceEffect.parts}
+                        </ResourceEffect>
+                      )}
+                      {option.carHealthEffect !== undefined && (
+                        <ResourceEffect $positive={option.carHealthEffect > 0}>
+                          Car Health: {option.carHealthEffect > 0 ? '+' : ''}{option.carHealthEffect}
+                        </ResourceEffect>
+                      )}
+                    </ResourceEffects>
+                  )}
+                </OptionButton>
+              ))}
+            </OptionsContainer>
+          )}
         </>
       )}
       
-      {showOutcome && (
+      {showOutcome && selectedOption && (
         <>
-          <CardDescription>
-            {selectedOption?.outcomes.text}
-          </CardDescription>
+          <NarrationPanel 
+            text={selectedOption.outcomes.text}
+            character={character}
+            onComplete={() => setNarrationComplete(true)}
+            ambientSound={getAmbientSound()}
+            voiceLine={getVoiceLine()}
+          />
           
-          <ContinueButton 
-            onClick={handleContinue}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Continue
-          </ContinueButton>
+          {narrationComplete && (
+            <ContinueButton 
+              onClick={handleContinue}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Continue
+            </ContinueButton>
+          )}
         </>
       )}
     </CardContainer>

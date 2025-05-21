@@ -54,8 +54,22 @@ const HomePage: React.FC = () => {
           >
             START JOURNEY
           </StartButtonLink>
+          
+          <SecondaryButtonLink 
+            to="/voice-settings"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            VOICE SETTINGS
+          </SecondaryButtonLink>
         </ButtonContainer>
       </Content>
+      
+      <Footer>
+        <FooterLink as="a" href="#" onClick={(e) => e.preventDefault()}>About</FooterLink>
+        <FooterLink as="a" href="#" onClick={(e) => e.preventDefault()}>Credits</FooterLink>
+        <FooterLink as={Link} to="/voice-settings">Voice Settings</FooterLink>
+      </Footer>
       
       <BackgroundOverlay />
     </HomeContainer>
@@ -170,6 +184,46 @@ const StartButtonLink = styled(motion(Link))`
 
   &:hover {
     background-color: #ff7777;
+  }
+`;
+
+const SecondaryButtonLink = styled(motion(Link))`
+  background-color: rgba(255, 85, 85, 0.3);
+  color: #ff5555;
+  border: 2px solid #ff5555;
+  padding: 1rem 2rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: rgba(255, 85, 85, 0.5);
+  }
+`;
+
+const Footer = styled.footer`
+  position: absolute;
+  bottom: 1rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  z-index: 2;
+`;
+
+const FooterLink = styled.div`
+  color: #aaa;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+  cursor: pointer;
+
+  &:hover {
+    color: #ff5555;
   }
 `;
 
